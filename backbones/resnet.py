@@ -176,7 +176,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, layers, num_classes=1000, 
+    def __init__(self, block, layers, num_classes=1000,
                  dcn=None, stage_with_dcn=(False, False, False, False)):
         self.dcn = dcn
         self.stage_with_dcn = stage_with_dcn
@@ -196,8 +196,8 @@ class ResNet(nn.Module):
             block, 512, layers[3], stride=2, dcn=dcn)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
-    
-        self.smooth = nn.Conv2d(2048, 256, kernel_size=1, stride=1, padding=1)    
+
+        self.smooth = nn.Conv2d(2048, 256, kernel_size=1, stride=1, padding=1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
