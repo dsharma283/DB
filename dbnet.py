@@ -1,6 +1,5 @@
-#!python3
-import argparse
 import os
+import sys
 import torch
 import cv2
 import numpy as np
@@ -8,48 +7,33 @@ from experiment import Structure, Experiment
 from concern.config import Configurable, Config
 import math
 
-def main():
-    parser = argparse.ArgumentParser(description='Text Recognition Training')
-    parser.add_argument('exp', type=str)
-    parser.add_argument('--resume', type=str, help='Resume from checkpoint')
-    parser.add_argument('--image_path', type=str, help='image path')
-    parser.add_argument('--result_dir', type=str, default='./demo_results/', help='path to save results')
-    parser.add_argument('--data', type=str,
-                        help='The name of dataloader which will be evaluated on.')
-    parser.add_argument('--image_short_side', type=int, default=736,
-                        help='The threshold to replace it in the representers')
-    parser.add_argument('--thresh', type=float,
-                        help='The threshold to replace it in the representers')
-    parser.add_argument('--box_thresh', type=float, default=0.6,
-                        help='The threshold to replace it in the representers')
-    parser.add_argument('--visualize', action='store_true',
-                        help='visualize maps in tensorboard')
-    parser.add_argument('--resize', action='store_true',
-                        help='resize')
-    parser.add_argument('--polygon', action='store_true',
-                        help='output polygons if true')
-    parser.add_argument('--eager', '--eager_show', action='store_true', dest='eager_show',
-                        help='Show iamges eagerly')
+def run_dbnet(image_path, model_path=f"{sys.path[0]}/pretrained"):
+    cfg_path = os.path.join(sys.path[0], f"experiments/seg_detector")
+    yaml_name = "totaltext_resnet50_deform_thre.yaml"
+    model_name = "totaltext_resnet50"
 
-    args = parser.parse_args()
-    args = vars(args)
-    args = {k: v for k, v in args.items() if v is not None}
+    model_path = os.path.join(model_path, model_name)
+    cfg_file = os.path.join(sys.path[-1], cfg_path, yaml_name)
+
+    args = {'exp':cfg_file, 'resume': model_path, 'image_path': image_path,
+            'result_dir': '/tmp', 'data': 'totaltext',
+            'image_short_side': 736, 'thresh': 0.5, 'box_thresh': 0.6,
+            'visualize': True, 'resize': False, 'polygon': False,
+            'eager': True}
 
     conf = Config()
     experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
     experiment_args.update(cmd=args)
     experiment = Configurable.construct_class_from_config(experiment_args)
+    return DBN(experiment, experiment_args, cmd=args).inference(args['image_path'], args['visualize'])
 
-    Demo(experiment, experiment_args, cmd=args).inference(args['image_path'], args['visualize'])
 
-
-class Demo:
+class DBN:
     def __init__(self, experiment, args, cmd=dict()):
         self.RGB_MEAN = np.array([122.67891434, 116.66876762, 104.00698793])
         self.experiment = experiment
         experiment.load('evaluation', **args)
         self.args = cmd
-        model_saver = experiment.train.model_saver
         self.structure = experiment.structure
         self.model_path = self.args['resume']
 
@@ -61,6 +45,7 @@ class Demo:
             torch.set_default_tensor_type('torch.cuda.FloatTensor')
         else:
             self.device = torch.device('cpu')
+        print(f'DEVICE = {self.device}')
 
     def init_model(self):
         model = self.structure.builder.build(self.device)
@@ -135,14 +120,19 @@ class Demo:
         with torch.no_grad():
             batch['image'] = img
             pred = model.forward(batch, training=False)
-            output = self.structure.representer.represent(batch, pred, is_output_polygon=self.args['polygon']) 
+            output = self.structure.representer.represent(batch, pred,
+                                                          is_output_polygon=self.args['polygon'])
             if not os.path.isdir(self.args['result_dir']):
                 os.mkdir(self.args['result_dir'])
             self.format_output(batch, output)
 
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
-                cv2.imwrite(os.path.join(self.args['result_dir'], image_path.split('/')[-1].split('.')[0]+'.jpg'), vis_image)
-
-if __name__ == '__main__':
-    main()
+                cv2.imwrite(os.path.join(self.args['result_dir'],
+                                         image_path.split('/')[-1].split('.')[0]+ '_res' + '.jpg'),
+                            vis_image)
+        return output
+#
+#if __name__ == '__main__':
+#    print(sys.path[0])
+#    run_dbnet(sys.argv[1])
