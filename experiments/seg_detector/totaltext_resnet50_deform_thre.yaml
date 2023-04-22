@@ -1,5 +1,5 @@
 import:
-    - 'experiments/seg_detector/base_totaltext.yaml'
+    - 'experiments/seg_detector/base_totaltext_predict.yaml'
 package: []
 define:
   - name: 'Experiment'
