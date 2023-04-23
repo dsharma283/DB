@@ -7,7 +7,7 @@ from experiment import Structure, Experiment
 from concern.config import Configurable, Config
 import math
 
-def run_dbnet(image_path, model_path=f"{sys.path[0]}/pretrained"):
+def run_dbnet(image_path, model_path=f"/app/inputs/pretrained"):
     cfg_path = os.path.join(sys.path[0], f"experiments/seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
     model_name = "totaltext_resnet50"
@@ -16,10 +16,10 @@ def run_dbnet(image_path, model_path=f"{sys.path[0]}/pretrained"):
     cfg_file = os.path.join(sys.path[-1], cfg_path, yaml_name)
 
     args = {'exp':cfg_file, 'resume': model_path, 'image_path': image_path,
-            'result_dir': '/tmp', 'data': 'totaltext',
+            'result_dir': '/app/inputs', 'data': 'totaltext',
             'image_short_side': 736, 'thresh': 0.5, 'box_thresh': 0.6,
             'visualize': True, 'resize': False, 'polygon': False,
-            'eager': True}
+            'eager': True, 'verbose': False}
 
     conf = Config()
     experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
@@ -45,7 +45,7 @@ class DBN:
             torch.set_default_tensor_type('torch.cuda.FloatTensor')
         else:
             self.device = torch.device('cpu')
-        print(f'DEVICE = {self.device}')
+        #print(f'DEVICE = {self.device}')
 
     def init_model(self):
         model = self.structure.builder.build(self.device)
@@ -132,7 +132,6 @@ class DBN:
                                          image_path.split('/')[-1].split('.')[0]+ '_res' + '.jpg'),
                             vis_image)
         return output
-#
-#if __name__ == '__main__':
-#    print(sys.path[0])
-#    run_dbnet(sys.argv[1])
+
+if __name__ == '__main__':
+    run_dbnet(sys.argv[1])
