@@ -7,18 +7,19 @@ from experiment import Structure, Experiment
 from concern.config import Configurable, Config
 import math
 
-def run_dbnet(image_path, model_path=f"/app/inputs/pretrained"):
-    cfg_path = os.path.join(sys.path[0], f"experiments/seg_detector")
+def run_dbnet(image, base_path=f"/data/dbnet", poly=False):
+    cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
     model_name = "totaltext_resnet50"
 
-    model_path = os.path.join(model_path, model_name)
+    model = os.path.join(base_path, "pretrained", model_name)
+    res_dir = os.path.join(base_path, "viz_output")
     cfg_file = os.path.join(sys.path[-1], cfg_path, yaml_name)
 
-    args = {'exp':cfg_file, 'resume': model_path, 'image_path': image_path,
-            'result_dir': '/app/inputs', 'data': 'totaltext',
+    args = {'exp':cfg_file, 'resume': model, 'image_path': image,
+            'result_dir': res_dir, 'data': 'totaltext',
             'image_short_side': 736, 'thresh': 0.5, 'box_thresh': 0.6,
-            'visualize': True, 'resize': False, 'polygon': False,
+            'visualize': True, 'resize': False, 'polygon': poly,
             'eager': True, 'verbose': False}
 
     conf = Config()
@@ -134,4 +135,7 @@ class DBN:
         return output
 
 if __name__ == '__main__':
-    run_dbnet(sys.argv[1])
+    images = os.path.join(sys.argv[1], "images")
+    for im in os.listdir(images):
+        image = os.path.join(images, im)
+        run_dbnet(image=image, base_path=sys.argv[1], poly=False)
