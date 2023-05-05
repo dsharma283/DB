@@ -1,5 +1,7 @@
 #!/bin/bash
 install_base=$1
+io_base=$2
+
 store_path="$install_base/backbone"
 bbone_file="$store_path/resnet50-19c8e357.pth"
 cache_path="/root/.cache/torch/hub/checkpoints"
@@ -11,7 +13,7 @@ then
 	cp -f $bbone_file $cache_path
 fi
 
-python3 dbnet.py $install_base
+python3 dbnet.py $io_base
 
 if [ ! -d $store_path ]
 then

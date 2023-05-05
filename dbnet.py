@@ -7,13 +7,15 @@ from experiment import Structure, Experiment
 from concern.config import Configurable, Config
 import math
 
-def run_dbnet(image, base_path=f"/data/dbnet", poly=False):
+def run_dbnet(image, o_path=f"/data/dbnet", poly=False):
     cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
-    model_name = "totaltext_resnet50"
 
-    model = os.path.join(base_path, "pretrained", model_name)
-    res_dir = os.path.join(base_path, "viz_output")
+    model_name = "totaltext_resnet50"
+    model = os.path.join(sys.path[0], "pretrained", model_name)
+
+    #res_dir = os.path.join(base_path, "viz_output")
+    res_dir = o_path
     cfg_file = os.path.join(sys.path[-1], cfg_path, yaml_name)
 
     args = {'exp':cfg_file, 'resume': model, 'image_path': image,
@@ -135,7 +137,7 @@ class DBN:
         return output
 
 if __name__ == '__main__':
-    images = os.path.join(sys.argv[1], "images")
+    images =sys.argv[1]
     for im in os.listdir(images):
-        image = os.path.join(images, im)
-        run_dbnet(image=image, base_path=sys.argv[1], poly=False)
+        image = os.path.join(sys.argv[1], im)
+        run_dbnet(image=image, o_path=sys.argv[1], poly=False)
