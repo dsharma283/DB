@@ -171,6 +171,56 @@ Contributions or pull requests are welcome.
 * DB is included in [OpenCV](https://github.com/opencv/opencv/blob/master/doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown)
 * DB is included in [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
 
+# Containerization
+The dbnet can now be run under docker containers. Follow the steps from this section.
+
+## Building a container
+```bash
+	 docker build -f containers/Dockerfile -t parser:dbnet .
+```
+## Setting up the extensions
+```bash
+	docker run -it --gpus all -v "/home/layout/layout-parser/data":/data  -v "/home/layout/layout-parser/images":/images parser:dbnet containers/commands.sh
+```
+## Running prediction under container
+``` bash
+	time docker run -it --gpus all -v "/home/layout/layout-parser/data":/data  -v "/home/layout/layout-parser/images":/images parser:dbnet containers/run-dbnet.sh /data/dbnet /images
+```
+### Sample output
+```bash
+
+	==========
+	== CUDA ==
+	==========
+
+	CUDA Version 11.7.1
+
+	Container image Copyright (c) 2016-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+	This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+	By pulling and using the container, you accept the terms and conditions of this license:
+	https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+	A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+	Resuming from /app/pretrained/totaltext_resnet50
+	Resumed from /app/pretrained/totaltext_resnet50
+	Resuming from /app/pretrained/totaltext_resnet50
+	Resumed from /app/pretrained/totaltext_resnet50
+	Resuming from /app/pretrained/totaltext_resnet50
+	Resumed from /app/pretrained/totaltext_resnet50
+	Resuming from /app/pretrained/totaltext_resnet50
+	Resumed from /app/pretrained/totaltext_resnet50
+	Resuming from /app/pretrained/totaltext_resnet50
+	Resumed from /app/pretrained/totaltext_resnet50
+
+	real    0m9.505s
+	user    0m0.017s
+	sys     0m0.016s
+```
+## Indic Language pretrained model
+The IL model can be found here [URL](https://drive.google.com/file/d/1wEYDs5iYkr-pfHLCahWAIQ6L7ivYLZEy/view?usp=sharing).
+
 ## Citing the related works
 
 Please cite the related works in your publications if it helps your research:
