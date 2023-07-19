@@ -136,8 +136,17 @@ class DBN:
                             vis_image)
         return output
 
+
+def should_skip(imname):
+    is_txt = imname.split('.')[-1] == 'txt'
+    is_res = imname.split('.')[0].split('_')[-1] == 'res'
+    return is_txt or is_res
+
+
 if __name__ == '__main__':
     images =sys.argv[1]
     for im in os.listdir(images):
+        if should_skip(im):
+            continue
         image = os.path.join(sys.argv[1], im)
         run_dbnet(image=image, o_path=sys.argv[1], poly=False)
