@@ -1,10 +1,9 @@
-import os
-import sys
-import torch
-import cv2
-import numpy as np
-from experiment import Structure, Experiment
 from concern.config import Configurable, Config
+from experiment import Structure, Experiment
+import os, sys, cv2
+import numpy as np
+import argparse
+import torch
 import math
 
 def run_dbnet(image, o_path=f"/data/dbnet", poly=False):
@@ -143,10 +142,23 @@ def should_skip(imname):
     return is_txt or is_res
 
 
+def process_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--images', '-i', help='Images to read', required=True)
+    parser.add_argument('--results', '-r', required=False,
+                        help='Output directory to save the predictions')
+    return parser
+
+
 if __name__ == '__main__':
-    images =sys.argv[1]
+    args = process_args().parse_args()
+    images = args.images
+    opath = args.results
+    if opath is None:
+        opath = images
+
     for im in os.listdir(images):
         if should_skip(im):
             continue
-        image = os.path.join(sys.argv[1], im)
-        run_dbnet(image=image, o_path=sys.argv[1], poly=False)
+        image = os.path.join(images, im)
+        run_dbnet(image=image, o_path=opath, poly=False)
