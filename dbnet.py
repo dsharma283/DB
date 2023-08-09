@@ -6,7 +6,7 @@ import argparse
 import torch
 import math
 
-def run_dbnet(image, o_path=f"/data/dbnet", poly=False):
+def run_dbnet(image, o_path=f"/data/dbnet", poly=False, viz=True):
     cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
 
@@ -20,7 +20,7 @@ def run_dbnet(image, o_path=f"/data/dbnet", poly=False):
     args = {'exp':cfg_file, 'resume': model, 'image_path': image,
             'result_dir': res_dir, 'data': 'totaltext',
             'image_short_side': 736, 'thresh': 0.5, 'box_thresh': 0.6,
-            'visualize': True, 'resize': False, 'polygon': poly,
+            'visualize': viz, 'resize': False, 'polygon': poly,
             'eager': True, 'verbose': False}
 
     conf = Config()
@@ -151,6 +151,10 @@ def process_args():
                         help='Output directory to save the predictions')
     parser.add_argument('--json', '-j', required=False, default=False, action='store_true',
                         help='Also save a json along with text')
+    parser.add_argument('--viz', '-v', required=False, default=False, action='store_true',
+                        help='Generate the vizualized images in results directory')
+    parser.add_argument('--poly', '-p', required=False, default=False, action='store_true',
+                        help='Generate polygon bounding boxes instead of rectangles')
     return parser
 
 
@@ -225,6 +229,7 @@ if __name__ == '__main__':
         if should_skip(im, images):
             continue
         image = os.path.join(images, im)
-        run_dbnet(image=image, o_path=opath, poly=False)
+        run_dbnet(image=image, o_path=opath,
+                  poly=args.poly, viz=args.viz)
         if args.json is True:
             process_json(opath, im)

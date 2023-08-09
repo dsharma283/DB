@@ -13,7 +13,7 @@ then
 	cp -f $bbone_file $cache_path
 fi
 
-python3 dbnet.py -i $io_base
+python3 dbnet.py -i $io_base -v
 
 if [ ! -d $store_path ]
 then
