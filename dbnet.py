@@ -160,6 +160,9 @@ def process_args():
 
 def read_bbfile(bbfile):
     bblist = []
+    if os.path.exists(bbfile) is False:
+        return bblist
+
     with open(bbfile, 'r') as fp:
         lines = fp.readlines()
     for line in lines:
@@ -188,15 +191,18 @@ def get_values(bb):
     return key, val
 
 
-def make_parameter_dictionary(bblist):
+def make_parameter_dictionary(bblist, empty_dict):
     bbdict = {}
+    if empty_dict:
+        return bbdict
+
     for bb in bblist:
         k, v = get_values(bb)
         bbdict[k] = v
     return bbdict
 
 
-def process_json(opath, im):
+def process_json(opath, im, empty_json=False):
     #Stisfying annotation tool requirements
     imbase = im.split('.')[0]
     midfix = 'coordinates'
@@ -209,11 +215,9 @@ def process_json(opath, im):
         os.makedirs(odir)
     if os.path.exists(ojson) is True:
         os.remove(ojson)
-    if os.path.exists(itxt) is False:
-        return
 
     bblist = read_bbfile(itxt)
-    bbdict = make_parameter_dictionary(bblist)
+    bbdict = make_parameter_dictionary(bblist, empty_json)
     with open(ojson, 'w') as of:
         json.dump(bbdict, of, indent = 4)
 
@@ -228,8 +232,16 @@ if __name__ == '__main__':
     for im in os.listdir(images):
         if should_skip(im, images):
             continue
+        empty_json = False
         image = os.path.join(images, im)
-        run_dbnet(image=image, o_path=opath,
-                  poly=args.poly, viz=args.viz)
+        try:
+            run_dbnet(image=image, o_path=opath,
+                      poly=args.poly, viz=args.viz)
+        except:
+            empty_json = True
+            print(f'dbnet failed for {im}')
+
         if args.json is True:
-            process_json(opath, im)
+            if empty_json:
+                print(f'wrote empty json for {im}')
+            process_json(opath, im, empty_json)
