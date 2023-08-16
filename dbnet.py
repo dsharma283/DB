@@ -173,7 +173,7 @@ def read_bbfile(bbfile):
     return bblist
 
 
-def get_values(bb):
+def get_rect_param(bb):
     x = float(bb[0])
     y = float(bb[1])
     width = float(bb[2] - bb[0])
@@ -191,18 +191,36 @@ def get_values(bb):
     return key, val
 
 
-def make_parameter_dictionary(bblist, empty_dict):
+def get_poly_param(bb):
+    key = [(int(bb[idx]), int(bb[idx + 1]))
+            for idx in range(0, len(bb), 2)]
+    coor = [[int(bb[idx]), int(bb[idx + 1])]
+            for idx in range(0, len(bb), 2)]
+    val = {
+            "coordinates": coor,
+            "text": ""
+            }
+    return str(key), val
+
+
+def get_values(bb, poly):
+    if poly:
+        return get_poly_param(bb)
+    return get_rect_param(bb)
+
+
+def make_parameter_dictionary(bblist, empty_dict, poly):
     bbdict = {}
     if empty_dict:
         return bbdict
 
     for bb in bblist:
-        k, v = get_values(bb)
+        k, v = get_values(bb, poly)
         bbdict[k] = v
     return bbdict
 
 
-def process_json(opath, im, empty_json=False):
+def process_json(opath, im, poly, empty_json=False):
     #Stisfying annotation tool requirements
     imbase = im.split('.')[0]
     midfix = 'coordinates'
@@ -217,7 +235,7 @@ def process_json(opath, im, empty_json=False):
         os.remove(ojson)
 
     bblist = read_bbfile(itxt)
-    bbdict = make_parameter_dictionary(bblist, empty_json)
+    bbdict = make_parameter_dictionary(bblist, empty_json, poly)
     with open(ojson, 'w') as of:
         json.dump(bbdict, of, indent = 4)
 
@@ -234,14 +252,18 @@ if __name__ == '__main__':
             continue
         empty_json = False
         image = os.path.join(images, im)
+        '''
         try:
             run_dbnet(image=image, o_path=opath,
                       poly=args.poly, viz=args.viz)
         except:
             empty_json = True
             print(f'dbnet failed for {im}')
+        '''
+        run_dbnet(image=image, o_path=opath, poly=args.poly, viz=args.viz)
 
         if args.json is True:
             if empty_json:
                 print(f'wrote empty json for {im}')
-            process_json(opath, im, empty_json)
+            process_json(opath, im=im, poly=args.poly,
+                    empty_json=empty_json)
