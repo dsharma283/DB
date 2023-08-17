@@ -252,15 +252,12 @@ if __name__ == '__main__':
             continue
         empty_json = False
         image = os.path.join(images, im)
-        '''
         try:
             run_dbnet(image=image, o_path=opath,
                       poly=args.poly, viz=args.viz)
         except:
             empty_json = True
             print(f'dbnet failed for {im}')
-        '''
-        run_dbnet(image=image, o_path=opath, poly=args.poly, viz=args.viz)
 
         if args.json is True:
             if empty_json:
