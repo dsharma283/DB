@@ -72,7 +72,8 @@ def process_one_script(il, basepath, opath, dsname):
         for idx, im in enumerate(sorted(os.listdir(lipi))):
             if should_skip(im):
                 continue
-            newname = basename + f'_{num:05d}'
+            #newname = basename + f'_{num:05d}'
+            newname = f'image_{num}'
             newname = handle_format_and_copy(im, lipi, newname, odir)
             name_map[newname] = im
             iml_of.write(newname+'\n')
