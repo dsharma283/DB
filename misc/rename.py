@@ -26,14 +26,18 @@ def sanity_checks(args):
     return 0
 
 
+def should_skip(il):
+    sk = False
+    if os.path.isdir(il):
+            return True
+    ext = il.split('.')[-1].lower()
+    if ext != 'jpg' and ext != 'jpeg' and ext != 'png':
+        sk = True
+    return sk
+
+
 def handle_format_and_copy(im, lipi, newname, odir):
     ext = im.split('.')[-1]
-    '''
-    if ext.lower() == 'png':
-        ext = 'jpg'
-        #handle png
-        print(f'{im}')
-    '''
     if ext.lower() == 'jpeg':
         ext = 'jpg'
     newname = newname + f'.{ext.lower()}'
@@ -64,18 +68,22 @@ def process_one_script(il, basepath, opath, dsname):
         os.remove(imlist_of)
 
     with open(imlist_of, 'a') as iml_of:
+        num = 1
         for idx, im in enumerate(sorted(os.listdir(lipi))):
-            num = idx + 1
+            if should_skip(im):
+                continue
             newname = basename + f'_{num:05d}'
             newname = handle_format_and_copy(im, lipi, newname, odir)
             name_map[newname] = im
             iml_of.write(newname+'\n')
+            num += 1
 
     jobj = json.dumps(name_map, indent=1)
     with open(json_of, 'w') as of:
         of.write(jobj)
 
     return name_map
+
 
 def process_images(args):
     impath = args.images
