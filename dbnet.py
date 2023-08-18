@@ -149,8 +149,6 @@ def process_args():
     parser.add_argument('--images', '-i', help='Images to read', required=True)
     parser.add_argument('--results', '-r', required=False,
                         help='Output directory to save the predictions')
-    parser.add_argument('--json', '-j', required=False, default=False, action='store_true',
-                        help='Also save a json along with text')
     parser.add_argument('--viz', '-v', required=False, default=False, action='store_true',
                         help='Generate the vizualized images in results directory')
     parser.add_argument('--poly', '-p', required=False, default=False, action='store_true',
@@ -158,89 +156,7 @@ def process_args():
     return parser
 
 
-def read_bbfile(bbfile):
-    bblist = []
-    if os.path.exists(bbfile) is False:
-        return bblist
-
-    with open(bbfile, 'r') as fp:
-        lines = fp.readlines()
-    for line in lines:
-        line = line.strip('\n').split(',')[:-1]
-        line = np.asarray([int(x) for x in line])
-        #line = convert_to_pthw(line, reshape_only=True)
-        bblist.append(line)
-    return bblist
-
-
-def get_rect_param(bb):
-    x = float(bb[0])
-    y = float(bb[1])
-    width = float(bb[2] - bb[0])
-    height = float(bb[7] - bb[1])
-    rotation = 0.0
-    text = ""
-    val = {
-            "x": float(x), "y": float(y),
-            "width": float(width),
-            "height": float(height),
-            "rotation": float(rotation),
-            "text" : text
-            }
-    key = f"{x}_{y}_{width}_{height}"
-    return key, val
-
-
-def get_poly_param(bb):
-    key = [(int(bb[idx]), int(bb[idx + 1]))
-            for idx in range(0, len(bb), 2)]
-    coor = [[int(bb[idx]), int(bb[idx + 1])]
-            for idx in range(0, len(bb), 2)]
-    val = {
-            "coordinates": coor,
-            "text": ""
-            }
-    return str(key), val
-
-
-def get_values(bb, poly):
-    if poly:
-        return get_poly_param(bb)
-    return get_rect_param(bb)
-
-
-def make_parameter_dictionary(bblist, empty_dict, poly):
-    bbdict = {}
-    if empty_dict:
-        return bbdict
-
-    for bb in bblist:
-        k, v = get_values(bb, poly)
-        bbdict[k] = v
-    return bbdict
-
-
-def process_json(opath, im, poly, empty_json=False):
-    #Stisfying annotation tool requirements
-    imbase = im.split('.')[0]
-    midfix = 'coordinates'
-    odir = os.path.join(opath, midfix, imbase)
-    jname = imbase + '_' + midfix + '.json'
-    ojson = os.path.join(odir, jname)
-    itxt = os.path.join(opath, 'res_'+imbase+'.txt')
-
-    if os.path.exists(odir) is False:
-        os.makedirs(odir)
-    if os.path.exists(ojson) is True:
-        os.remove(ojson)
-
-    bblist = read_bbfile(itxt)
-    bbdict = make_parameter_dictionary(bblist, empty_json, poly)
-    with open(ojson, 'w') as of:
-        json.dump(bbdict, of, indent = 4)
-
-
-if __name__ == '__main__':
+def start_main():
     args = process_args().parse_args()
     images = args.images
     opath = args.results
@@ -250,17 +166,13 @@ if __name__ == '__main__':
     for im in os.listdir(images):
         if should_skip(im, images):
             continue
-        empty_json = False
         image = os.path.join(images, im)
         try:
             run_dbnet(image=image, o_path=opath,
                       poly=args.poly, viz=args.viz)
         except:
-            empty_json = True
             print(f'dbnet failed for {im}')
 
-        if args.json is True:
-            if empty_json:
-                print(f'wrote empty json for {im}')
-            process_json(opath, im=im, poly=args.poly,
-                    empty_json=empty_json)
+
+if __name__ == '__main__':
+    start_main()
