@@ -72,13 +72,20 @@ def make_parameter_dictionary(bblist, empty_dict, poly):
     return bbdict
 
 
-def handle_filteration(img, opath):
+def handle_filteration(img, opath, copy):
     if os.path.exists(opath) is False:
         os.makedirs(opath)
-    shutil.copy(img, opath)
+    oflist = os.path.join(opath, "image-list.txt")
+    im = img.split('/')[-1]
+    with open(oflist, 'a') as of:
+        of.write(f'{im}\n')
+    if copy:
+        shutil.copy(img, opath)
 
 
-def filter_and_generate_json(opath, img, poly=False, filter=False, blank=False):
+def filter_and_generate_json(opath, img, poly=False,
+                             filter=False, copy=False,
+                             blank=False):
     #Satisfying annotation tool requirements
     imbase = img.split('/')[-1].split('.')[0]
     itxt = os.path.join(opath, 'res_'+imbase+'.txt')
@@ -88,10 +95,9 @@ def filter_and_generate_json(opath, img, poly=False, filter=False, blank=False):
     if filter:
         if len(bblist):
             opath = os.path.join(opath, "filtered", "with-text")
-            imodir = opath
         else:
             opath = os.path.join(opath, "filtered", "without-text")
-        handle_filteration(img, opath)
+        handle_filteration(img, opath, copy)
         jodir = os.path.join(opath, midfix, imbase)
     else:
         jodir = os.path.join(opath, midfix, imbase)
@@ -127,6 +133,9 @@ def process_args_extended():
                         help='Run images through dbnet and perform text-notext filteration')
     parser.add_argument('--json', '-j', required=False, default=False, action='store_true',
                         help='Also save a json along with text')
+    parser.add_argument('--copy', '-c', required=False, default=False, action='store_true',
+                        help='Copy the original input files to filtered directory,'
+                             'otherwise only file-list is generated')
     return parser
 
 
@@ -151,7 +160,8 @@ def start_main():
 
         if args.json is True:
             filter_and_generate_json(opath, img=image, poly=args.poly,
-                                     filter=args.filter, blank=dbn_fails) 
+                                     filter=args.filter, copy=args.copy,
+                                     blank=dbn_fails) 
 
 
 if __name__ == '__main__':
