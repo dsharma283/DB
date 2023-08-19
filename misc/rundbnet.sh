@@ -9,6 +9,7 @@ do
 	odir="$out_dir/$dir"
 	#echo "CUDA_VISIBLE_DEVICES=0 python dbnet.py -i $idir -r $odir -j -v"
 	echo "Starting $dir"
-	CUDA_VISIBLE_DEVICES=0 python dbnet.py -i $idir -r $odir -j -p
+	#CUDA_VISIBLE_DEVICES=0 python dbnet.py -i $idir -r $odir -j -p
+	CUDA_VISIBLE_DEVICES=0 python dbnet-filter.py -i $idir  -r $odir -j -p -f -c
 	sleep 10
 done
