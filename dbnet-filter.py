@@ -1,6 +1,6 @@
 from concern.config import Configurable, Config
 from experiment import Structure, Experiment
-from dbnet import process_args, DBN, run_dbnet
+from dbnet import process_args, should_skip, DBN, init_dbnet
 import os, sys, json, cv2, shutil
 from tqdm import tqdm
 import numpy as np
@@ -115,19 +115,6 @@ def filter_and_generate_json(opath, img, poly=False,
         json.dump(bbdict, of, indent = 4)
 
 
-def should_skip(imname, basepath):
-    sk = True
-    if os.path.isdir(os.path.join(basepath, imname)):
-        return sk
-
-    ext = imname.split('.')[-1].lower()
-    if ext == 'jpg' or ext == 'jpeg' or ext == 'png':
-        prefix = imname.split('.')[0].split('_')[-1]
-        if prefix  != 'res':
-            sk = False
-    return sk
-
-
 def process_args_extended():
     parser = process_args()
     parser.add_argument('--filter', '-f', required=False, default=False, action='store_true',
@@ -146,6 +133,7 @@ def start_main():
     opath = args.results
     if opath is None:
         opath = images
+    dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
 
     pbar = tqdm(sorted(os.listdir(images)))
     for im in pbar:
@@ -155,8 +143,7 @@ def start_main():
         dbn_fails = False
         image = os.path.join(images, im)
         try:
-            run_dbnet(image=image, o_path=opath,
-                      poly=args.poly, viz=args.viz)
+            dbn.inference(image_path=image, visualize=args.viz)
         except:
             dbn_fails = True
             print(f'dbnet failed for {im}')
