@@ -98,7 +98,7 @@ class SegDetectorRepresenter(Configurable):
                     continue
             else:
                 continue
-            box = box.reshape(-1, 2)
+            box = box.reshape(-1, 2).astype(np.int64)
             _, sside = self.get_mini_boxes(box.reshape((-1, 1, 2)))
             if sside < self.min_size + 2:
                 continue
