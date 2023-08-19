@@ -2,6 +2,7 @@ from concern.config import Configurable, Config
 from experiment import Structure, Experiment
 from dbnet import process_args, DBN, run_dbnet
 import os, sys, json, cv2, shutil
+from tqdm import tqdm
 import numpy as np
 import argparse
 import torch
@@ -146,9 +147,11 @@ def start_main():
     if opath is None:
         opath = images
 
-    for im in os.listdir(images):
+    pbar = tqdm(sorted(os.listdir(images)))
+    for im in pbar:
         if should_skip(im, images):
             continue
+        pbar.set_postfix_str(im)
         dbn_fails = False
         image = os.path.join(images, im)
         try:

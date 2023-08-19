@@ -1,6 +1,7 @@
 from concern.config import Configurable, Config
 from experiment import Structure, Experiment
 import os, sys, json, cv2
+from tqdm import tqdm
 import numpy as np
 import argparse
 import torch
@@ -57,11 +58,11 @@ class DBN:
         if not os.path.exists(path):
             print("Checkpoint not found: " + path)
             return
-        print("Resuming from " + path)
+        #print("Resuming from " + path)
         states = torch.load(
             path, map_location=self.device)
         model.load_state_dict(states, strict=False)
-        print("Resumed from " + path)
+        #print("Resumed from " + path)
 
     def resize_image(self, img):
         height, width, _ = img.shape
@@ -163,9 +164,11 @@ def start_main():
     if opath is None:
         opath = images
 
-    for im in os.listdir(images):
+    pbar = tqdm(sorted(os.listdir(images)))
+    for im in pbar:
         if should_skip(im, images):
             continue
+        pbar.set_postfix_str(im)
         image = os.path.join(images, im)
         try:
             run_dbnet(image=image, o_path=opath,
