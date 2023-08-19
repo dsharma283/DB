@@ -7,6 +7,45 @@ import argparse
 import torch
 import math
 
+
+def set_args(cfg, model, res, viz, poly, imp=None):
+    args = {
+            'exp':cfg,
+            'resume': model,
+            'image_path': imp,
+            'result_dir': res,
+            'data': 'totaltext',
+            'image_short_side': 736,
+            'thresh': 0.5,
+            'box_thresh': 0.6,
+            'visualize': viz,
+            'resize': True,
+            'polygon': poly,
+            'eager': False,
+            'verbose': False}
+    return args
+
+
+def init_dbnet(o_path=f"/data/dbnet", poly=False, viz=True):
+    cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
+    yaml_name = "totaltext_resnet50_deform_thre.yaml"
+
+    model_name = "totaltext_resnet50"
+    model = os.path.join(sys.path[0], "pretrained", model_name)
+
+    res_dir = o_path
+    cfg_file = os.path.join(sys.path[-1], cfg_path, yaml_name)
+    args = set_args(cfg_file, model, res_dir, viz, poly)
+
+    conf = Config()
+    experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
+    experiment_args.update(cmd=args)
+    experiment = Configurable.construct_class_from_config(experiment_args)
+    dbn = DBN(experiment, experiment_args, cmd=args)
+    dbn.init_model(load_wts=True)
+    return dbn
+
+
 def run_dbnet(image, o_path=f"/data/dbnet", poly=False, viz=True):
     cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
@@ -17,18 +56,15 @@ def run_dbnet(image, o_path=f"/data/dbnet", poly=False, viz=True):
     #res_dir = os.path.join(base_path, "viz_output")
     res_dir = o_path
     cfg_file = os.path.join(sys.path[-1], cfg_path, yaml_name)
-
-    args = {'exp':cfg_file, 'resume': model, 'image_path': image,
-            'result_dir': res_dir, 'data': 'totaltext',
-            'image_short_side': 736, 'thresh': 0.5, 'box_thresh': 0.6,
-            'visualize': viz, 'resize': False, 'polygon': poly,
-            'eager': True, 'verbose': False}
+    args = set_args(cfg_file, model, res_dir, viz, poly, imp=image)
 
     conf = Config()
     experiment_args = conf.compile(conf.load(args['exp']))['Experiment']
     experiment_args.update(cmd=args)
     experiment = Configurable.construct_class_from_config(experiment_args)
-    return DBN(experiment, experiment_args, cmd=args).inference(args['image_path'], args['visualize'])
+    dbn = DBN(experiment, experiment_args, cmd=args)
+    return dbn.inference(args['image_path'],
+                         args['visualize'], create_model=True)
 
 
 class DBN:
@@ -39,6 +75,7 @@ class DBN:
         self.args = cmd
         self.structure = experiment.structure
         self.model_path = self.args['resume']
+        self.model = None
 
     def init_torch_tensor(self):
         # Use gpu or not
@@ -50,19 +87,29 @@ class DBN:
             self.device = torch.device('cpu')
         #print(f'DEVICE = {self.device}')
 
-    def init_model(self):
+    def load_weights(self, model):
+        self.init_torch_tensor()
+        self.resume(model, self.model_path)
+        model.eval()
+        self.model = model
+        return model
+
+    def init_model(self, load_wts=False):
+        self.init_torch_tensor()
         model = self.structure.builder.build(self.device)
+        if load_wts:
+            model = self.load_weights(model)
         return model
 
     def resume(self, model, path):
         if not os.path.exists(path):
             print("Checkpoint not found: " + path)
             return
-        #print("Resuming from " + path)
+        print("Resuming from " + path)
         states = torch.load(
             path, map_location=self.device)
         model.load_state_dict(states, strict=False)
-        #print("Resumed from " + path)
+        print("Resumed from " + path)
 
     def resize_image(self, img):
         height, width, _ = img.shape
@@ -74,7 +121,7 @@ class DBN:
             new_height = int(math.ceil(new_width / width * height / 32) * 32)
         resized_img = cv2.resize(img, (new_width, new_height))
         return resized_img
-        
+
     def load_image(self, image_path):
         img = cv2.imread(image_path, cv2.IMREAD_COLOR).astype('float32')
         original_shape = img.shape[:2]
@@ -83,7 +130,7 @@ class DBN:
         img /= 255.
         img = torch.from_numpy(img).permute(2, 0, 1).float().unsqueeze(0)
         return img, original_shape
-        
+
     def format_output(self, batch, output):
         batch_boxes, batch_scores = output
         for index in range(batch['image'].size(0)):
@@ -109,13 +156,11 @@ class DBN:
                         box = boxes[i,:,:].reshape(-1).tolist()
                         result = ",".join([str(int(x)) for x in box])
                         res.write(result + ',' + str(score) + "\n")
-        
-    def inference(self, image_path, visualize=False):
-        self.init_torch_tensor()
-        model = self.init_model()
-        self.resume(model, self.model_path)
-        all_matircs = {}
-        model.eval()
+
+    def inference(self, image_path, visualize=False, create_model=False):
+        if create_model:
+            _ = self.init_model(create_model)
+        model = self.model
         batch = dict()
         batch['filename'] = [image_path]
         img, original_shape = self.load_image(image_path)
@@ -138,11 +183,16 @@ class DBN:
 
 
 def should_skip(imname, basepath):
+    sk = True
     if os.path.isdir(os.path.join(basepath, imname)):
-        return True
-    is_txt = imname.split('.')[-1] == 'txt'
-    is_res = imname.split('.')[0].split('_')[-1] == 'res'
-    return is_txt or is_res
+        return sk
+
+    ext = imname.split('.')[-1].lower()
+    if ext == 'jpg' or ext == 'jpeg' or ext == 'png':
+        prefix = imname.split('.')[0].split('_')[-1]
+        if prefix  != 'res':
+            sk = False
+    return sk
 
 
 def process_args():
@@ -164,6 +214,7 @@ def start_main():
     if opath is None:
         opath = images
 
+    dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
     pbar = tqdm(sorted(os.listdir(images)))
     for im in pbar:
         if should_skip(im, images):
@@ -171,8 +222,9 @@ def start_main():
         pbar.set_postfix_str(im)
         image = os.path.join(images, im)
         try:
-            run_dbnet(image=image, o_path=opath,
-                      poly=args.poly, viz=args.viz)
+            '''run_dbnet(image=image, o_path=opath,
+                      poly=args.poly, viz=args.viz)'''
+            dbn.inference(image_path=image, visualize=args.viz)
         except:
             print(f'dbnet failed for {im}')
 
