@@ -1,12 +1,7 @@
-from concern.config import Configurable, Config
-from experiment import Structure, Experiment
-from dbnet import process_args, should_skip, DBN, init_dbnet
+from dbnet import process_args, init_dbnet, init_tqdm
 import os, sys, json, cv2, shutil
-from tqdm import tqdm
 import numpy as np
 import argparse
-import torch
-import math
 
 
 def read_bbfile(bbfile):
@@ -133,12 +128,10 @@ def start_main():
     opath = args.results
     if opath is None:
         opath = images
-    dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
 
-    pbar = tqdm(sorted(os.listdir(images)))
+    dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
+    pbar = init_tqdm(images)
     for im in pbar:
-        if should_skip(im, images):
-            continue
         pbar.set_postfix_str(im)
         dbn_fails = False
         image = os.path.join(images, im)

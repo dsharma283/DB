@@ -207,6 +207,15 @@ def process_args():
     return parser
 
 
+def init_tqdm(inpath):
+    imgs = []
+    for im in sorted(os.listdir(inpath)):
+        if should_skip(im, inpath):
+            continue
+        imgs.append(im)
+    return tqdm(sorted(imgs))
+
+
 def start_main():
     args = process_args().parse_args()
     images = args.images
@@ -215,10 +224,8 @@ def start_main():
         opath = images
 
     dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
-    pbar = tqdm(sorted(os.listdir(images)))
+    pbar = init_tqdm(images)
     for im in pbar:
-        if should_skip(im, images):
-            continue
         pbar.set_postfix_str(im)
         image = os.path.join(images, im)
         try:
