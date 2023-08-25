@@ -129,7 +129,8 @@ def start_main():
     if opath is None:
         opath = images
 
-    dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
+    dbn = init_dbnet(o_path=opath, poly=args.poly,
+                     viz=args.viz, pfx=True)
     pbar = init_tqdm(images)
     for im in pbar:
         pbar.set_postfix_str(im)

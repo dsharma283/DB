@@ -26,7 +26,7 @@ def set_args(cfg, model, res, viz, poly, imp=None):
     return args
 
 
-def init_dbnet(o_path=f"/data/dbnet", poly=False, viz=True):
+def init_dbnet(o_path=f"/data/dbnet", poly=False, viz=True, pfx=False):
     cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
 
@@ -42,11 +42,13 @@ def init_dbnet(o_path=f"/data/dbnet", poly=False, viz=True):
     experiment_args.update(cmd=args)
     experiment = Configurable.construct_class_from_config(experiment_args)
     dbn = DBN(experiment, experiment_args, cmd=args)
-    dbn.init_model(load_wts=True)
+    dbn.init_model(load_wts=True, pfx=pfx)
     return dbn
 
-
-def run_dbnet(image, o_path=f"/data/dbnet", poly=False, viz=True):
+'''
+run_dbnet() function is depricated!
+'''
+def run_dbnet(image, o_path=f"/data/dbnet", poly=False, viz=True, pfx=True):
     cfg_path = os.path.join(sys.path[0], "experiments", "seg_detector")
     yaml_name = "totaltext_resnet50_deform_thre.yaml"
 
@@ -64,7 +66,7 @@ def run_dbnet(image, o_path=f"/data/dbnet", poly=False, viz=True):
     experiment = Configurable.construct_class_from_config(experiment_args)
     dbn = DBN(experiment, experiment_args, cmd=args)
     return dbn.inference(args['image_path'],
-                         args['visualize'], create_model=True)
+                         args['visualize'], create_model=True, pfx=pfx)
 
 
 class DBN:
@@ -76,6 +78,9 @@ class DBN:
         self.structure = experiment.structure
         self.model_path = self.args['resume']
         self.model = None
+        self.pfx = False
+        self.bbdir = self.args['result_dir']
+        self.vizdir = self.args['result_dir']
 
     def init_torch_tensor(self):
         # Use gpu or not
@@ -87,6 +92,22 @@ class DBN:
             self.device = torch.device('cpu')
         #print(f'DEVICE = {self.device}')
 
+    def create_save_paths(self, pfx=False):
+        if not os.path.isdir(self.args['result_dir']):
+            os.makedirs(self.args['result_dir'])
+        if not pfx:
+            bbdir = os.path.join(self.args['result_dir'], 'bbs')
+            if not os.path.isdir(bbdir):
+                os.makedirs(bbdir)
+            self.bbdir = bbdir
+
+            if self.args['visualize']:
+                vizdir = os.path.join(self.args['result_dir'], 'viz')
+                if not os.path.isdir(vizdir):
+                    os.makedirs(vizdir)
+                self.vizdir = vizdir
+        self.pfx = pfx
+
     def load_weights(self, model):
         self.init_torch_tensor()
         self.resume(model, self.model_path)
@@ -94,8 +115,9 @@ class DBN:
         self.model = model
         return model
 
-    def init_model(self, load_wts=False):
+    def init_model(self, load_wts=False, pfx=False):
         self.init_torch_tensor()
+        self.create_save_paths(pfx)
         model = self.structure.builder.build(self.device)
         if load_wts:
             model = self.load_weights(model)
@@ -136,8 +158,10 @@ class DBN:
         for index in range(batch['image'].size(0)):
             original_shape = batch['shape'][index]
             filename = batch['filename'][index]
-            result_file_name = 'res_' + filename.split('/')[-1].split('.')[0] + '.txt'
-            result_file_path = os.path.join(self.args['result_dir'], result_file_name)
+            result_file_name = filename.split('/')[-1] + '.txt'
+            if self.pfx:
+                result_file_name = 'res_' + filename.split('/')[-1].split('.')[0] + '.txt'
+            result_file_path = os.path.join(self.bbdir, result_file_name)
             boxes = batch_boxes[index]
             scores = batch_scores[index]
             if self.args['polygon']:
@@ -170,15 +194,17 @@ class DBN:
             pred = model.forward(batch, training=False)
             output = self.structure.representer.represent(batch, pred,
                                                           is_output_polygon=self.args['polygon'])
-            if not os.path.isdir(self.args['result_dir']):
-                os.makedirs(self.args['result_dir'])
             self.format_output(batch, output)
 
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
-                cv2.imwrite(os.path.join(self.args['result_dir'],
-                                         image_path.split('/')[-1].split('.')[0]+ '_res' + '.jpg'),
-                            vis_image)
+                if self.pfx:
+                    infix = '_res.'
+                else:
+                    infix = '.'
+                imn = image_path.split('/')[-1].split('.')
+                res_im = imn[0] + infix + imn[1].lower()
+                cv2.imwrite(os.path.join(self.vizdir, res_im), vis_image)
         return output
 
 
@@ -204,6 +230,12 @@ def process_args():
                         help='Generate the vizualized images in results directory')
     parser.add_argument('--poly', '-p', required=False, default=False, action='store_true',
                         help='Generate polygon bounding boxes instead of rectangles')
+    parser.add_argument('--use-prefix', '-u', required=False, default=False, action='store_true',
+                        help='''If specified output bounding box text file will use res_ prefix
+                             followed by im-name.txt. By default, the new naming scheme will
+                             be used where the output file is named as bbs/<im-name>.<im-ext>.txt.
+                             If -v is used the visualized image with go to viz/<im-name>'''
+                       )
     return parser
 
 
@@ -223,7 +255,8 @@ def start_main():
     if opath is None:
         opath = images
 
-    dbn = init_dbnet(o_path=opath, poly=args.poly, viz=args.viz)
+    dbn = init_dbnet(o_path=opath, poly=args.poly,
+                     viz=args.viz, pfx=args.use_prefix)
     pbar = init_tqdm(images)
     for im in pbar:
         pbar.set_postfix_str(im)
