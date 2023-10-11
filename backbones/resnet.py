@@ -357,6 +357,27 @@ def resnet101(pretrained=True, **kwargs):
     return model
 
 
+def deformable_resnet101(pretrained=True, **kwargs):
+    """Constructs a ResNet-101 model with deformable conv.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet(Bottleneck, [3, 4, 23, 3],
+                   dcn=dict(modulated=True,
+                            deformable_groups=1,
+                            fallback_on_stride=False),
+                   stage_with_dcn=[False, True, True, True],
+                   **kwargs)
+    if pretrained:
+        if next(model.parameters()).is_cuda:
+            model.load_state_dict(model_zoo.load_url(model_urls['resnet101'],
+                                                     map_location=torch.device(device)),
+                                  strict=False)
+        else:
+            model.load_state_dict(model_zoo.load_url(model_urls['resnet101']),strict=False)
+    return model
+
+
 def resnet152(pretrained=True, **kwargs):
     """Constructs a ResNet-152 model.
     Args:
