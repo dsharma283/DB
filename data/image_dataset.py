@@ -8,6 +8,12 @@ import numpy as np
 import glob
 from concern.config import Configurable, State
 import math
+import random
+
+
+def shuffle_func():
+    return 0.1
+
 
 class ImageDataset(data.Dataset, Configurable):
     r'''Dataset reading from images.
@@ -36,18 +42,26 @@ class ImageDataset(data.Dataset, Configurable):
         for i in range(len(self.data_dir)):
             with open(self.data_list[i], 'r') as fid:
                 image_list = fid.readlines()
+            random.shuffle(image_list, shuffle_func)
             if self.is_training:
+                gt_path = []
                 image_path=[self.data_dir[i]+'/train_images/'+timg.strip() for timg in image_list]
-                gt_path=[self.data_dir[i]+'/train_gts/'+timg.strip()+'.txt' for timg in image_list]
+                for timg in image_list:
+                    gt = '.'.join(timg.strip().split('.')[:-1])+'.txt'
+                    gt_path.append(self.data_dir[i]+'/train_gts/'+'gt_'+gt)
             else:
                 image_path=[self.data_dir[i]+'/test_images/'+timg.strip() for timg in image_list]
                 print(self.data_dir[i])
                 if 'TD500' in self.data_list[i] or 'total_text' in self.data_list[i]:
                     gt_path=[self.data_dir[i]+'/test_gts/'+timg.strip()+'.txt' for timg in image_list]
                 else:
-                    gt_path=[self.data_dir[i]+'/test_gts/'+'gt_'+timg.strip().split('.')[0]+'.txt' for timg in image_list]
+                    gt_path = []
+                    for timg in image_list:
+                        gt = '.'.join(timg.strip().split('.')[:-1])+'.txt'
+                        gt_path.append(self.data_dir[i]+'/test_gts/'+'gt_'+gt)
             self.image_paths += image_path
             self.gt_paths += gt_path
+        self.image_paths = self.image_paths
         self.num_samples = len(self.image_paths)
         self.targets = self.load_ann()
         if self.is_training:
@@ -57,7 +71,8 @@ class ImageDataset(data.Dataset, Configurable):
         res = []
         for gt in self.gt_paths:
             lines = []
-            reader = open(gt, 'r').readlines()
+            with open(gt, 'r') as rf:
+                reader = rf.readlines()
             for line in reader:
                 item = {}
                 parts = line.strip().split(',')

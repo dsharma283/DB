@@ -138,7 +138,7 @@ class Eval:
         for index in range(batch['image'].size(0)):
             original_shape = batch['shape'][index]
             filename = batch['filename'][index]
-            result_file_name = 'res_' + filename.split('/')[-1].split('.')[0] + '.txt'
+            result_file_name = 'res_' + '.'.join(filename.split('/')[-1].split('.')[:-1]) + '.txt'
             result_file_path = os.path.join(self.args['result_dir'], result_file_name)
             boxes = batch_boxes[index]
             scores = batch_scores[index]

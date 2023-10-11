@@ -101,7 +101,7 @@ class Demo:
         for index in range(batch['image'].size(0)):
             original_shape = batch['shape'][index]
             filename = batch['filename'][index]
-            result_file_name = 'res_' + filename.split('/')[-1].split('.')[0] + '.txt'
+            result_file_name = 'res_' +  '.'.join(filename.split('/')[-1].split('.')[:-1]) + '.txt'
             result_file_path = os.path.join(self.args['result_dir'], result_file_name)
             boxes = batch_boxes[index]
             scores = batch_scores[index]
@@ -142,7 +142,7 @@ class Demo:
 
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
-                cv2.imwrite(os.path.join(self.args['result_dir'], image_path.split('/')[-1].split('.')[0]+'.jpg'), vis_image)
+                cv2.imwrite(os.path.join(self.args['result_dir'], '.'.join(image_path.split('/')[-1].split('.')[:-1])+'.jpg'), vis_image)
 
 if __name__ == '__main__':
     main()
