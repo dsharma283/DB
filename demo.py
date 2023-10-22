@@ -7,6 +7,7 @@ import numpy as np
 from experiment import Structure, Experiment
 from concern.config import Configurable, Config
 import math
+from tqdm import tqdm
 
 def main():
     parser = argparse.ArgumentParser(description='Text Recognition Training')
@@ -121,13 +122,8 @@ class Demo:
                         box = boxes[i,:,:].reshape(-1).tolist()
                         result = ",".join([str(int(x)) for x in box])
                         res.write(result + ',' + str(score) + "\n")
-        
-    def inference(self, image_path, visualize=False):
-        self.init_torch_tensor()
-        model = self.init_model()
-        self.resume(model, self.model_path)
-        all_matircs = {}
-        model.eval()
+
+    def infer_one(self, model, image_path, visualize=False):
         batch = dict()
         batch['filename'] = [image_path]
         img, original_shape = self.load_image(image_path)
@@ -143,6 +139,23 @@ class Demo:
             if visualize and self.structure.visualizer:
                 vis_image = self.structure.visualizer.demo_visualize(image_path, output)
                 cv2.imwrite(os.path.join(self.args['result_dir'], '.'.join(image_path.split('/')[-1].split('.')[:-1])+'.jpg'), vis_image)
+
+
+    def inference(self, image_path, visualize=False):
+        self.init_torch_tensor()
+        model = self.init_model()
+        self.resume(model, self.model_path)
+        all_matircs = {}
+        model.eval()
+        if os.path.isdir(image_path):
+            pbar = tqdm(sorted(os.listdir(image_path)))
+            for idx, item in enumerate(pbar):
+                pbar.set_postfix_str(item)
+                imp = os.path.join(image_path, item)
+                self.infer_one(model, imp, visualize)
+        else:
+            self.infer_one(model, image_path, visualize)
+
 
 if __name__ == '__main__':
     main()
